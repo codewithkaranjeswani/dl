@@ -1,14 +1,18 @@
-import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import {
   getServerSession,
   type DefaultSession,
   type NextAuthOptions,
+  type DefaultUser,
 } from "next-auth";
-import GithubProvider from "next-auth/providers/discord";
+import GithubProvider from "next-auth/providers/github";
 
 import { env } from "@/env";
-import { db } from "@/server/db";
-import { mysqlTable } from "@/server/db/schema";
+import { db } from "@/server/db/index";
+import { USER_ROLE, type UserRole } from "@/lib/types";
+import { type DefaultJWT } from "next-auth/jwt";
+import Credentials from "next-auth/providers/credentials";
+import { compare } from "bcrypt";
+import { DrizzleAdapter } from "./my-drizzle-adapter";
 
 /**
  * Module augmentation for `next-auth` types. Allows us to add custom properties to the `session`
@@ -20,47 +24,100 @@ declare module "next-auth" {
   interface Session extends DefaultSession {
     user: {
       id: string;
-      // ...other properties
-      // role: UserRole;
+      role?: UserRole;
     } & DefaultSession["user"];
   }
 
-  // interface User {
-  //   // ...other properties
-  //   // role: UserRole;
-  // }
+  interface User extends DefaultUser {
+    id: string;
+    role?: UserRole;
+  }
 }
 
-/**
- * Options for NextAuth.js used to configure adapters, providers, callbacks, etc.
- *
- * @see https://next-auth.js.org/configuration/options
- */
+declare module "next-auth/jwt" {
+  interface JWT extends Record<string, unknown>, DefaultJWT {
+    id: string;
+    role?: UserRole;
+  }
+}
+
 export const authOptions: NextAuthOptions = {
+  session: {
+    strategy: "jwt",
+    // maxAge: 30 * 24 * 60 * 60, // 30 days // default
+  },
   callbacks: {
-    session: ({ session, user }) => ({
-      ...session,
-      user: {
-        ...session.user,
-        id: user.id,
+    async jwt({ token, user, account, profile }) {
+      const dbUser = await db.query.users.findFirst({
+        where: (user, { eq }) => eq(user.email, token.email ?? ""),
+      });
+      if (!dbUser) {
+        throw new Error(`User with email = ${token.email} not found!`);
+      }
+      token.role = dbUser.role ?? undefined;
+      token.id = dbUser.id;
+      return token;
+    },
+    async session({ session, user, token }) {
+      if (token) {
+        session.user.role = token.role ?? USER_ROLE.USER;
+        session.user.id = token.id;
+      }
+      return session;
+    },
+  },
+  adapter: DrizzleAdapter(db),
+  providers: [
+    Credentials({
+      name: "Credentials",
+      credentials: {
+        email: {
+          label: "Email",
+          type: "text",
+          placeholder: "johndoe@gmail.com",
+        },
+        password: {
+          label: "Password",
+          type: "password",
+          placeholder: "**********",
+        },
+      },
+      async authorize(credentials, req) {
+        // console.log("credentials");
+        // console.log(credentials);
+        if (!credentials?.password || !credentials.email) {
+          throw new Error("Invalid input credentials");
+        }
+        const dbUser = await db.query.users.findFirst({
+          where: (user, { eq }) => eq(user.email, credentials.email),
+        });
+        if (!dbUser) {
+          throw new Error(`User with email = ${credentials.email} not found!`);
+        } else if (!dbUser.password) {
+          throw new Error(
+            `User with email = ${credentials.email} has no password`,
+          );
+        }
+        const isValid =
+          !!dbUser.password &&
+          (await compare(credentials.password, dbUser.password));
+        if (isValid) {
+          return {
+            id: dbUser.id,
+            name: dbUser.name,
+            email: dbUser.email,
+            image: dbUser.image,
+          };
+        } else {
+          throw new Error("Invalid credentials. Try again.");
+        }
       },
     }),
-  },
-  adapter: DrizzleAdapter(db, mysqlTable),
-  providers: [
+
     GithubProvider({
       clientId: env.GITHUB_CLIENT_ID,
       clientSecret: env.GITHUB_CLIENT_SECRET,
     }),
-    /**
-     * ...add more providers here.
-     *
-     * Most other providers require a bit more work than the Discord provider. For example, the
-     * GitHub provider requires you to add the `refresh_token_expires_in` field to the Account
-     * model. Refer to the NextAuth.js docs for the provider you want to use. Example:
-     *
-     * @see https://next-auth.js.org/providers/github
-     */
   ],
 };
 

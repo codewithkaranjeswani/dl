@@ -5,9 +5,9 @@ import {
   protectedProcedure,
   publicProcedure,
 } from "@/server/api/trpc";
-import { posts } from "@/server/db/schema";
+import { todos } from "@/server/db/schema";
 
-export const postRouter = createTRPCRouter({
+export const todoRouter = createTRPCRouter({
   hello: publicProcedure
     .input(z.object({ text: z.string() }))
     .query(({ input }) => {
@@ -20,17 +20,21 @@ export const postRouter = createTRPCRouter({
     .input(z.object({ name: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       // simulate a slow db call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      await ctx.db.insert(posts).values({
-        name: input.name,
-        createdById: ctx.session.user.id,
+      const dt = new Date();
+      await ctx.db.insert(todos).values({
+        listId: -1,
+        content: input.name,
+        authorId: ctx.session.user.id,
+        createdAt: dt,
+        updatedAt: dt,
       });
     }),
 
   getLatest: publicProcedure.query(({ ctx }) => {
-    return ctx.db.query.posts.findFirst({
-      orderBy: (posts, { desc }) => [desc(posts.createdAt)],
+    return ctx.db.query.todos.findFirst({
+      orderBy: (todos, { desc }) => [desc(todos.createdAt)],
     });
   }),
 
