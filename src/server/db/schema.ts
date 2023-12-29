@@ -25,7 +25,7 @@ export const courses = mysqlTable(
   "course",
   {
     id: bigint("id", { mode: "number" }).primaryKey().autoincrement(),
-    title: bigint("title", { mode: "number" }).notNull(),
+    title: varchar("title", { length: 255 }).notNull(),
     description: varchar("description", { length: 255 }),
     cost: bigint("cost", { mode: "number" }),
     authorId: varchar("author_id", { length: 255 }).notNull(),
