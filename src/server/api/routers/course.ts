@@ -24,6 +24,7 @@ export const courseRouter = createTRPCRouter({
       await ctx.db.insert(courses).values({
         title: input.title,
         description: input.description,
+        publish: false,
         cost: -1,
         authorId: ctx.session.user.id,
         createdAt: dt,
@@ -31,6 +32,12 @@ export const courseRouter = createTRPCRouter({
       });
     }),
 
+  getAllPublished: protectedProcedure.query(async ({ ctx }) => {
+    return await ctx.db.query.courses.findMany({
+      where: eq(courses.publish, true),
+      orderBy: (courses, { desc }) => [desc(courses.createdAt)],
+    });
+  }),
   getMine: protectedProcedure.query(async ({ ctx }) => {
     return await ctx.db.query.courses.findMany({
       where: eq(courses.authorId, ctx.session.user.id),
