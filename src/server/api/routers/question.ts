@@ -25,7 +25,7 @@ export const questionRouter = createTRPCRouter({
     .input(z.object({ quizId: z.number() }))
     .query(async ({ ctx, input }) => {
       return await ctx.db.query.questions.findMany({
-        where: eq(questions.id, input.quizId),
+        where: eq(questions.quizId, input.quizId),
         orderBy: (questions, { asc }) => [asc(questions.order)],
       });
     }),

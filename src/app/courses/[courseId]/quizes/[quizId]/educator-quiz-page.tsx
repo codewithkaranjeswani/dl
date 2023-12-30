@@ -39,7 +39,9 @@ export default function EducatorQuizPage() {
       <div className="font-semibold">Add questions to your quiz</div>
       <CreateQuestionForm quizId={quizId} />
       <div className="py-5" />
-      <div className="">
+      <div className="font-semibold">List of questions in this quiz</div>
+      <div className="py-5" />
+      <div className="flex flex-col gap-y-5">
         {questions?.map((question) => (
           <div key={`one-${question.id}`} className="">
             <Card>
