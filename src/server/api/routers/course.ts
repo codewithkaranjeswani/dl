@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   createTRPCRouter,
   protectedProcedure,
@@ -36,6 +37,22 @@ export const courseRouter = createTRPCRouter({
       orderBy: (courses, { desc }) => [desc(courses.createdAt)],
     });
   }),
+
+  getMineById: protectedProcedure
+    .input(z.object({ courseId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const dbCourse = await ctx.db.query.courses.findFirst({
+        where: eq(courses.id, input.courseId),
+      });
+      if (!dbCourse) {
+        return undefined;
+      }
+      if (dbCourse.authorId === ctx.session.user.id) {
+        return dbCourse;
+      } else {
+        return undefined;
+      }
+    }),
 
   // getSecretMessage: protectedProcedure.query(() => {
   //   return "you can now see this secret message!";

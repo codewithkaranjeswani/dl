@@ -1,12 +1,19 @@
 "use client";
 import { api } from "@/trpc/react";
 import CreateCourseForm from "./create-course-form";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from "@/components/ui/card";
+import { datefmt } from "@/lib/utils";
+import Link from "next/link";
 
-// TODO:
-// make the courses clickable to go to course page
-// each course page should have a form to create quizes
 export default function EducatorLandingPage() {
-  const { data: courses } = api.course.getMine.useQuery();
+  const { data: courses } = api.course.getMine.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+  });
 
   return (
     <div className="py-5">
@@ -20,11 +27,21 @@ export default function EducatorLandingPage() {
         Here are the list of courses you have created. Only the latest will be
         shown to learners.
       </div>
-      <div className="border-b py-5" />
-      <div className="border-b">
+      <div className="py-5" />
+      <div className="grid gap-5 md:grid-cols-3">
         {courses?.map((course) => (
-          <div key={`one-${course.id}`}>
-            <div key={`two-${course.id}`}>{course.title}</div>
+          <div key={`one-${course.id}`} className="">
+            <Link href={`/courses/${course.id}`}>
+              <Card>
+                <CardHeader className="font-semibold">
+                  {course.title}
+                </CardHeader>
+                <CardContent>{course.description}</CardContent>
+                <CardFooter className="text-xs font-thin">
+                  {datefmt(course.createdAt)}
+                </CardFooter>
+              </Card>
+            </Link>
           </div>
         ))}
       </div>

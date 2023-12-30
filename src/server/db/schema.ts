@@ -49,7 +49,7 @@ export const courseRelations = relations(courses, ({ one, many }) => ({
 
 export const quizes = mysqlTable("quiz", {
   id: bigint("id", { mode: "number" }).primaryKey().autoincrement(),
-  title: bigint("title", { mode: "number" }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
   description: varchar("description", { length: 255 }),
   authorId: varchar("author_id", { length: 255 }).notNull(),
   courseId: bigint("course_id", { mode: "number" }).notNull(),
