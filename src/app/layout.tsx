@@ -7,6 +7,7 @@ import { TRPCReactProvider } from "@/trpc/react";
 import Menubar from "@/components/menu-bar";
 import { ThemeProvider } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
+import { Toaster } from "@/components/ui/toaster";
 
 const fontSans = FontSans({
   subsets: ["latin"],
@@ -44,6 +45,7 @@ export default function RootLayout({
               {children}
             </ThemeProvider>
           </TRPCReactProvider>
+          <Toaster />
         </div>
       </body>
     </html>

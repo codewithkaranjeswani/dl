@@ -13,12 +13,25 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/ui/use-toast";
 import { TQues } from "@/lib/types";
 import { datefmt } from "@/lib/utils";
 import { api } from "@/trpc/react";
 import { usePathname } from "next/navigation";
-import { useRef, useState } from "react";
+import { z } from "zod";
+import { useState } from "react";
 
 export default function LearnerQuizPage() {
   const currentPath = usePathname();
@@ -55,15 +68,46 @@ export default function LearnerQuizPage() {
   );
 }
 
+const ZAns = z.object({ atext: z.string() });
+type TAns = z.infer<typeof ZAns>;
+
 function QuestionOnCarouselItem({ question }: { question: TQues }) {
-  const [ans, setAns] = useState<boolean>();
+  const { toast } = useToast();
+  const [disableForm, setDisableForm] = useState<boolean>(false);
   const checkAns = api.question.checkAnswerById.useMutation({
     onSuccess: async (data) => {
-      setAns(data);
+      if (data) {
+        toast({
+          variant: "default",
+          title: "Correct Answer",
+          description: "Continue to the next question!",
+        });
+        setDisableForm(true);
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Incorrect Answer",
+          description: "Try Again",
+        });
+      }
     },
   });
-  const inputRef = useRef<HTMLInputElement>(null);
-  console.log(ans);
+  const form = useForm<TAns>({
+    resolver: zodResolver(ZAns),
+    defaultValues: {
+      atext: "",
+    },
+  });
+
+  function onSubmit(values: TAns) {
+    if (!disableForm) {
+      checkAns.mutate({
+        questionId: question.id,
+        atext: values.atext,
+      });
+      form.reset();
+    }
+  }
   return (
     <CarouselItem key={`car-${question.id}`}>
       <div key={`one-${question.id}`} className="flex flex-col gap-y-2 px-2 ">
@@ -73,23 +117,32 @@ function QuestionOnCarouselItem({ question }: { question: TQues }) {
           </CardHeader>
           <CardContent>Q: {question.qtext}</CardContent>
         </Card>
-        <Input type="text" placeholder="Answer here" ref={inputRef} />
-        <Button
-          type="submit"
-          variant={"outline"}
-          onClick={(e) => {
-            e.preventDefault();
-            if (!!inputRef.current) {
-              const atext = inputRef.current.value;
-              checkAns.mutate({
-                questionId: question.id,
-                atext: atext,
-              });
-            }
-          }}
-        >
-          Submit
-        </Button>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <FormField
+              control={form.control}
+              name="atext"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Answer</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Answer here"
+                      {...field}
+                      disabled={disableForm}
+                    />
+                  </FormControl>
+                  <FormDescription>Type Answer here</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button type="submit" variant={"outline"} disabled={disableForm}>
+              Submit
+            </Button>
+          </form>
+        </Form>
       </div>
     </CarouselItem>
   );
