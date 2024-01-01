@@ -19,20 +19,24 @@ export const quizRouter = createTRPCRouter({
       });
     }),
 
+  getByIdWithQuestions: protectedProcedure
+    .input(z.object({ quizId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      // questions should be ordered by order
+      return await ctx.db.query.quizes.findFirst({
+        where: eq(quizes.id, input.quizId),
+        with: { questions: true },
+      });
+    }),
   getMineById: protectedProcedure
     .input(z.object({ quizId: z.number() }))
     .query(async ({ ctx, input }) => {
-      const dbQuiz = await ctx.db.query.quizes.findFirst({
-        where: eq(quizes.id, input.quizId),
+      return await ctx.db.query.quizes.findFirst({
+        where: and(
+          eq(quizes.id, input.quizId),
+          eq(quizes.authorId, ctx.session.user.id),
+        ),
       });
-      if (!dbQuiz) {
-        return undefined;
-      }
-      if (dbQuiz.authorId === ctx.session.user.id) {
-        return dbQuiz;
-      } else {
-        return undefined;
-      }
     }),
 
   getMineByCourseId: protectedProcedure

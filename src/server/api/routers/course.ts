@@ -6,7 +6,7 @@ import {
 } from "@/server/api/trpc";
 import { courses } from "@/server/db/schema";
 import { ZCourseCreate } from "@/lib/types";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 export const courseRouter = createTRPCRouter({
   // hello: publicProcedure
@@ -38,6 +38,16 @@ export const courseRouter = createTRPCRouter({
       orderBy: (courses, { desc }) => [desc(courses.createdAt)],
     });
   }),
+
+  getByIdPublished: protectedProcedure
+    .input(z.object({ courseId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      return await ctx.db.query.courses.findFirst({
+        where: and(eq(courses.id, input.courseId), eq(courses.publish, true)),
+        with: { quizes: true },
+      });
+    }),
+
   getMine: protectedProcedure.query(async ({ ctx }) => {
     return await ctx.db.query.courses.findMany({
       where: eq(courses.authorId, ctx.session.user.id),

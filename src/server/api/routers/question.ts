@@ -2,7 +2,7 @@ import { z } from "zod";
 import { ZQuesCreate } from "@/lib/types";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { questions } from "@/server/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 export const questionRouter = createTRPCRouter({
   create: protectedProcedure
@@ -21,11 +21,23 @@ export const questionRouter = createTRPCRouter({
       });
     }),
 
-  getMineByQuizId: protectedProcedure
+  listByQuizId: protectedProcedure
     .input(z.object({ quizId: z.number() }))
     .query(async ({ ctx, input }) => {
       return await ctx.db.query.questions.findMany({
         where: eq(questions.quizId, input.quizId),
+        orderBy: (questions, { asc }) => [asc(questions.order)],
+      });
+    }),
+
+  getMineByQuizId: protectedProcedure
+    .input(z.object({ quizId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      return await ctx.db.query.questions.findMany({
+        where: and(
+          eq(questions.quizId, input.quizId),
+          eq(questions.authorId, ctx.session.user.id),
+        ),
         orderBy: (questions, { asc }) => [asc(questions.order)],
       });
     }),
