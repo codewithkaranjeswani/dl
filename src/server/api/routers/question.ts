@@ -30,6 +30,22 @@ export const questionRouter = createTRPCRouter({
       });
     }),
 
+  checkAnswerById: protectedProcedure
+    .input(z.object({ questionId: z.number(), atext: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const dbQuestion = await ctx.db.query.questions.findFirst({
+        where: eq(questions.id, input.questionId),
+      });
+      if (!dbQuestion) {
+        return false;
+      }
+      if (dbQuestion.atext === input.atext) {
+        return true;
+      } else {
+        return false;
+      }
+    }),
+
   getMineByQuizId: protectedProcedure
     .input(z.object({ quizId: z.number() }))
     .query(async ({ ctx, input }) => {

@@ -1,3 +1,4 @@
+import { questions } from "@/server/db/schema";
 import { z } from "zod";
 
 export const USER_ROLE = {
@@ -44,3 +45,5 @@ export const ZQuesCreate = z.object({
 });
 
 export type TQuesCreate = z.infer<typeof ZQuesCreate>;
+
+export type TQues = typeof questions.$inferSelect;
